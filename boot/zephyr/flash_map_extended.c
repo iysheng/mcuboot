@@ -31,6 +31,7 @@ static const struct device *flash_dev;
 
 const struct device *flash_device_get_binding(char *dev_name)
 {
+    /* 初始化 flash 设备 */
     if (!flash_dev) {
         flash_dev = device_get_binding(dev_name);
     }

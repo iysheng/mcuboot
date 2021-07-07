@@ -165,6 +165,7 @@ struct arm_vector_table {
 
 extern void sys_clock_disable(void);
 
+/* ARM 走这个 */
 static void do_boot(struct boot_rsp *rsp)
 {
     struct arm_vector_table *vt;
@@ -179,6 +180,7 @@ static void do_boot(struct boot_rsp *rsp)
     rc = flash_device_base(rsp->br_flash_dev_id, &flash_base);
     assert(rc == 0);
 
+    /* 获取向量表首地址 */
     vt = (struct arm_vector_table *)(flash_base +
                                      rsp->br_image_off +
                                      rsp->br_hdr->ih_hdr_size);
@@ -196,11 +198,13 @@ static void do_boot(struct boot_rsp *rsp)
 
 #ifdef CONFIG_CPU_CORTEX_M7
     /* Disable instruction cache and data cache before chain-load the application */
+    /* 禁止指令 cache 和 数据 cache */
     SCB_DisableDCache();
     SCB_DisableICache();
 #endif
 
 #if CONFIG_CPU_HAS_ARM_MPU || CONFIG_CPU_HAS_NXP_MPU
+    /* 清楚 MPU 保护 */
     z_arm_clear_arm_mpu_config();
 #endif
 
@@ -226,16 +230,19 @@ static void do_boot(struct boot_rsp *rsp)
 #endif /* CONFIG_SW_VECTOR_RELAY */
 #else /* CONFIG_BOOT_INTR_VEC_RELOC */
 #if defined(CONFIG_CPU_CORTEX_M_HAS_VTOR) && defined(CONFIG_SW_VECTOR_RELAY)
+    /* 初始化向量表 */
     _vector_table_pointer = _vector_start;
     SCB->VTOR = (uint32_t)__vector_relay_table;
 #endif
 #endif /* CONFIG_BOOT_INTR_VEC_RELOC */
 
+    /* 设置栈指针 */
     __set_MSP(vt->msp);
 #if CONFIG_MCUBOOT_CLEANUP_ARM_CORE
     __set_CONTROL(0x00); /* application will configures core on its own */
     __ISB();
 #endif
+    /* 执行 img 的 reset 函数 */
     ((void (*)(void))vt->reset)();
 }
 
@@ -432,19 +439,23 @@ void main(void)
     int rc;
     fih_int fih_rc = FIH_FAILURE;
 
+    /* 喂狗 */
     MCUBOOT_WATCHDOG_FEED();
 
+    /* 使用 LOG 记录提示信息 */
 #if !defined(MCUBOOT_DIRECT_XIP)
     BOOT_LOG_INF("Starting bootloader");
 #else
     BOOT_LOG_INF("Starting Direct-XIP bootloader");
 #endif
 
+    /* 点灯 */
 #ifdef CONFIG_MCUBOOT_INDICATION_LED
     /* LED init */
     led_init();
 #endif
 
+    /* 堆区初始化,如果没有使能 mbedlts 加密相关的 ,那么是空函数 */
     os_heap_init();
 
     ZEPHYR_BOOT_LOG_START();
@@ -452,6 +463,7 @@ void main(void)
     (void)rc;
 
 #if (!defined(CONFIG_XTENSA) && defined(DT_CHOSEN_ZEPHYR_FLASH_CONTROLLER_LABEL))
+    /* 初始化 flash 设备,根据设备名称获取 flash 设备 */
     if (!flash_device_get_binding(DT_CHOSEN_ZEPHYR_FLASH_CONTROLLER_LABEL)) {
         BOOT_LOG_ERR("Flash device %s not found",
 		     DT_CHOSEN_ZEPHYR_FLASH_CONTROLLER_LABEL);
@@ -467,6 +479,7 @@ void main(void)
 #endif
 
 #ifdef CONFIG_MCUBOOT_SERIAL
+    /* 通过检测管脚高低电平确认是否进入到串口恢复模式 */
     if (detect_pin(CONFIG_BOOT_SERIAL_DETECT_PORT,
                    CONFIG_BOOT_SERIAL_DETECT_PIN,
                    CONFIG_BOOT_SERIAL_DETECT_PIN_VAL,
@@ -476,9 +489,12 @@ void main(void)
         gpio_pin_set(led, LED0_GPIO_PIN, 1);
 #endif
 
+        /* 进入到串口恢复模式 */
         BOOT_LOG_INF("Enter the serial recovery mode");
+        /* 初始化 console */
         rc = boot_console_init();
         __ASSERT(rc == 0, "Error initializing boot console.\n");
+        /* 进入到串口接收模式 */
         boot_serial_start(&boot_funcs);
         __ASSERT(0, "Bootloader serial process was terminated unexpectedly.\n");
     }
@@ -512,7 +528,12 @@ void main(void)
     }
 #endif
 
+    /*
+     * 执行函数
+     * fih_rc = boot_go(&rsp);
+     * */
     FIH_CALL(boot_go, fih_rc, &rsp);
+    /* 如果没有成功,那么记录错误信息 */
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
         BOOT_LOG_ERR("Unable to find bootable image");
         FIH_PANIC;

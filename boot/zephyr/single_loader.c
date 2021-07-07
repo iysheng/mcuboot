@@ -107,11 +107,13 @@ boot_go(struct boot_rsp *rsp)
     rc = flash_area_open(FLASH_AREA_IMAGE_PRIMARY(0), &_fa_p);
     assert(rc == 0);
 
+    /* 获取 flash 的 hdr */
     rc = boot_image_load_header(_fa_p, &_hdr);
     if (rc != 0)
         goto out;
 
 #ifdef MCUBOOT_VALIDATE_PRIMARY_SLOT
+    /* 检验 mcuboot 的有效性 */
     FIH_CALL(boot_image_validate, fih_rc, _fa_p, &_hdr);
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
         goto out;

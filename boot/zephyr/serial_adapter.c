@@ -176,6 +176,7 @@ boot_uart_fifo_getline(char **line)
 	node = sys_slist_get(&lines_queue);
 	irq_unlock(key);
 
+	/* 没有捕获新的命令 */
 	if (node == NULL) {
 		cmd = NULL;
 		*line = NULL;

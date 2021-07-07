@@ -463,6 +463,7 @@ boot_serial_input(char *buf, int len)
     if (hdr->nh_group == MGMT_GROUP_ID_IMAGE) {
         switch (hdr->nh_id) {
         case IMGMGR_NMGR_ID_STATE:
+            /* 列出存储的 img */
             bs_list(buf, len);
             break;
         case IMGMGR_NMGR_ID_UPLOAD:
@@ -544,6 +545,7 @@ boot_serial_output(void)
  * Returns 1 if full packet has been received.
  */
 static int
+/* 这个函数做什么的??? */
 boot_serial_in_dec(char *in, int inlen, char *out, int *out_off, int maxout)
 {
     int rc;
@@ -615,10 +617,12 @@ boot_serial_start(const struct boot_uart_funcs *f)
     while (1) {
         MCUBOOT_CPU_IDLE();
         rc = f->read(in_buf + off, sizeof(in_buf) - off, &full_line);
+        /* 如果没有接收到命令 */
         if (rc <= 0 && !full_line) {
             continue;
         }
         off += rc;
+        /* 如果接收到了一行命令 */
         if (!full_line) {
             if (off == max_input) {
                 /*
