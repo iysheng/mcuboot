@@ -99,6 +99,7 @@ boot_read_image_headers(struct boot_loader_state *state, bool require_all,
     int i;
 
     for (i = 0; i < BOOT_NUM_SLOTS; i++) {
+        /* 尝试读取 image 的 header 保存到 state 对应的成员变量 */
         rc = boot_read_image_header(state, i, boot_img_hdr(state, i), bs);
         if (rc != 0) {
             /* If `require_all` is set, fail on any single fail, otherwise
@@ -301,6 +302,7 @@ boot_write_sz(struct boot_loader_state *state)
     return elem_sz;
 }
 
+/* 初始化对应的 flash area */
 static int
 boot_initialize_area(struct boot_loader_state *state, int flash_area)
 {
@@ -311,11 +313,17 @@ boot_initialize_area(struct boot_loader_state *state, int flash_area)
 
     num_sectors = BOOT_MAX_IMG_SECTORS;
 
+    /* 如果初始化的是 primary area */
     if (flash_area == FLASH_AREA_IMAGE_PRIMARY(BOOT_CURR_IMG(state))) {
+        /* 获取对应的 sector 首地址 */
         out_sectors = BOOT_IMG(state, BOOT_PRIMARY_SLOT).sectors;
+        /* 获取对应的 sector 的数量 */
         out_num_sectors = &BOOT_IMG(state, BOOT_PRIMARY_SLOT).num_sectors;
+    /* 如果初始化的是 secondary area */
     } else if (flash_area == FLASH_AREA_IMAGE_SECONDARY(BOOT_CURR_IMG(state))) {
+        /* 获取对应的 sector 首地址 */
         out_sectors = BOOT_IMG(state, BOOT_SECONDARY_SLOT).sectors;
+        /* 获取对应的 sector 的数量 */
         out_num_sectors = &BOOT_IMG(state, BOOT_SECONDARY_SLOT).num_sectors;
 #if MCUBOOT_SWAP_USING_SCRATCH
     } else if (flash_area == FLASH_AREA_IMAGE_SCRATCH) {
@@ -335,6 +343,7 @@ boot_initialize_area(struct boot_loader_state *state, int flash_area)
     if (rc != 0) {
         return rc;
     }
+    /* 给 state 的 num_sectors 赋值,确定对应的 image slot 占多少个 sector */
     *out_num_sectors = num_sectors;
     return 0;
 }
@@ -351,6 +360,7 @@ boot_read_sectors(struct boot_loader_state *state)
     uint8_t image_index;
     int rc;
 
+    /* 获取当前 image index 编号 */
     image_index = BOOT_CURR_IMG(state);
 
     rc = boot_initialize_area(state, FLASH_AREA_IMAGE_PRIMARY(image_index));
@@ -370,6 +380,7 @@ boot_read_sectors(struct boot_loader_state *state)
     }
 #endif
 
+    /* 获取写颗粒的大小 */
     BOOT_WRITE_SZ(state) = boot_write_sz(state);
 
     return 0;
@@ -823,6 +834,7 @@ done:
 }
 #endif /* MCUBOOT_HW_ROLLBACK_PROT */
 
+/* 应该是没有定义这两个 */
 #if !defined(MCUBOOT_DIRECT_XIP) && !defined(MCUBOOT_RAM_LOAD)
 /**
  * Determines which swap operation to perform, if any.  If it is determined
@@ -1644,7 +1656,9 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
     int rc;
     fih_int fih_rc = FIH_FAILURE;
 
-    /* Determine the sector layout of the image slots and scratch area. */
+    /* Determine the sector layout of the image slots and scratch area.
+     * 读取 sectors 的信息到 state 指向的结构体,关键是初始化 imgs 的 sectors 还有 num_sectors
+     * */
     rc = boot_read_sectors(state);
     if (rc != 0) {
         BOOT_LOG_WRN("Failed reading sectors; BOOT_MAX_IMG_SECTORS=%d"
@@ -1657,6 +1671,7 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
     }
 
     /* Attempt to read an image header from each slot. */
+    /* 获取所有的 strcu image_header 信息 */
     rc = boot_read_image_headers(state, false, NULL);
     if (rc != 0) {
         /* Continue with next image if there is one. */
@@ -1670,6 +1685,7 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
      * Just boot into primary slot.
      */
     if (boot_slots_compatible(state)) {
+        /* 初始化 struct boot_status 结构体 */
         boot_status_reset(bs);
 
 #ifndef MCUBOOT_OVERWRITE_ONLY
@@ -1832,7 +1848,9 @@ boot_update_hw_rollback_protection(struct boot_loader_state *state)
 #endif
 }
 
+/* 执行的这个 */
 fih_int
+/* 相关的启动介质有关的内容会存储到 rsp 指针指向的结构体 */
 context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 {
     size_t slot;
@@ -1854,9 +1872,11 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
     TARGET_STATIC boot_sector_t scratch_sectors[BOOT_MAX_IMG_SECTORS];
 #endif
 
+    /* 清除 boot_loader_state 结构体 */
     memset(state, 0, sizeof(struct boot_loader_state));
     has_upgrade = false;
 
+    /* 如果 image 的数量只有 1 个 */
 #if (BOOT_IMAGE_NUMBER == 1)
     (void)has_upgrade;
 #endif
@@ -1875,8 +1895,10 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
         boot_enc_zeroize(BOOT_CURR_ENC(state));
 #endif
 
+        /* 获取 image 的编号 */
         image_index = BOOT_CURR_IMG(state);
 
+        /* 赋值 primary sector 和 secondary slot 的指针 */
         BOOT_IMG(state, BOOT_PRIMARY_SLOT).sectors =
             primary_slot_sectors[image_index];
         BOOT_IMG(state, BOOT_SECONDARY_SLOT).sectors =
@@ -1889,7 +1911,9 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
          * of this call.
          */
         for (slot = 0; slot < BOOT_NUM_SLOTS; slot++) {
+            /* 根据 slot 和 image index 查找对应的的 flash 信息 */
             fa_id = flash_area_id_from_multi_image_slot(image_index, slot);
+            /* 根据 flash id 以及对应的 flash area 信息打开对应的 flash area 设备 */
             rc = flash_area_open(fa_id, &BOOT_IMG_AREA(state, slot));
             assert(rc == 0);
         }
@@ -1900,6 +1924,7 @@ context_boot_go(struct boot_loader_state *state, struct boot_rsp *rsp)
 #endif
 
         /* Determine swap type and complete swap if it has been aborted. */
+        /* ~~读取镜像~~ */
         boot_prepare_image_for_update(state, &bs);
 
         if (BOOT_IS_UPGRADE(BOOT_SWAP_TYPE(state))) {
@@ -2123,6 +2148,7 @@ done:
     FIH_RET(fih_rc);
 }
 
+/* 没有定义这个 */
 #else /* MCUBOOT_DIRECT_XIP || MCUBOOT_RAM_LOAD */
 
 #define NO_ACTIVE_SLOT UINT32_MAX

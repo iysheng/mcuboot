@@ -108,6 +108,7 @@ struct flash_area;
 					    */
 #define IMAGE_TLV_ANY               0xffff /* Used to iterate over all TLV */
 
+/* 镜像的版本号 */
 struct image_version {
     uint8_t iv_major;
     uint8_t iv_minor;
@@ -126,24 +127,37 @@ struct image_dependency {
 };
 
 /** Image header.  All fields are in little endian byte order. */
+/* 镜像的头部信息 */
 struct image_header {
-    uint32_t ih_magic;
+    /* image_header 头部的魔数 */
+    uint32_t ih_magic; 
     uint32_t ih_load_addr;
+    /* image header 的大小,也指示了镜像的偏移长度,并且提供了向后兼容的支持 */
     uint16_t ih_hdr_size;           /* Size of image header (bytes). */
+    /* 受保护的 image header 的 tlv 的大小 */
     uint16_t ih_protect_tlv_size;   /* Size of protected TLV area (bytes). */
+    /* 镜像的大小 */
     uint32_t ih_img_size;           /* Does not include header. */
+    /* image header 的 flags */
     uint32_t ih_flags;              /* IMAGE_F_[...]. */
+    /* 镜像的版本 */
     struct image_version ih_ver;
     uint32_t _pad1;
 };
 
 /** Image TLV header.  All fields in little endian. */
+/* 镜像中 tlv indo 的头部信息
+ * tlv 是 type-length-value
+ * */
 struct image_tlv_info {
+    /* 镜像 tlv 的魔数, == IMAGE_TLV_PROT_INFO_MAGIC */
     uint16_t it_magic;
+    /* 镜像 tlv 区整个的区域大小,包含 tlv_info 的头部 */
     uint16_t it_tlv_tot;  /* size of TLV area (including tlv_info header) */
 };
 
 /** Image trailer TLV format. All fields in little endian. */
+/* tlv 结构体 */
 struct image_tlv {
     uint16_t it_type;   /* IMAGE_TLV_[...]. */
     uint16_t it_len;    /* Data length (not including TLV header). */

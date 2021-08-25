@@ -51,7 +51,9 @@ struct flash_area;
 
 #define BOOT_TMPBUF_SZ  256
 
-/** Number of image slots in flash; currently limited to two. */
+/** Number of image slots in flash; currently limited to two.
+ * 一个 primary slot 另一个是 secondary slot
+ * */
 #define BOOT_NUM_SLOTS                  2
 
 #if (defined(MCUBOOT_OVERWRITE_ONLY) + \
@@ -199,8 +201,10 @@ typedef struct flash_area boot_sector_t;
 #endif
 
 /** Private state maintained during boot. */
+/* 启动过程中私有的状态机 */
 struct boot_loader_state {
     struct {
+        /* 包含有头部信息 */
         struct image_header hdr;
         const struct flash_area *area;
         boot_sector_t *sectors;
@@ -368,6 +372,7 @@ static inline size_t
 boot_img_sector_size(const struct boot_loader_state *state,
                      size_t slot, size_t sector)
 {
+    /* 返回这个 sector 的 size 信息 */
     return BOOT_IMG(state, slot).sectors[sector].fa_size;
 }
 

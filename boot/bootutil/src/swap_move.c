@@ -89,6 +89,7 @@ boot_read_image_header(struct boot_loader_state *state, int slot,
         }
     }
 
+    /* 打开对应的 flash 设备 */
     area_id = flash_area_id_from_multi_image_slot(BOOT_CURR_IMG(state), slot);
     rc = flash_area_open(area_id, &fap);
     if (rc != 0) {
@@ -96,6 +97,7 @@ boot_read_image_header(struct boot_loader_state *state, int slot,
         goto done;
     }
 
+    /* 从这个 flash 的头部读取 image header 信息,存储到 out_hdr 指向的 struct image_header 结构体 */
     rc = flash_area_read(fap, off, out_hdr, sizeof *out_hdr);
     if (rc != 0) {
         rc = BOOT_EFLASH;
@@ -103,6 +105,7 @@ boot_read_image_header(struct boot_loader_state *state, int slot,
     }
 
     /* We only know where the headers are located when bs is valid */
+    /* 如果 MAGIC 不匹配那么返回 -1 */
     if (bs != NULL && out_hdr->ih_magic != IMAGE_MAGIC) {
         rc = -1;
         goto done;
@@ -217,6 +220,7 @@ boot_slots_compatible(struct boot_loader_state *state)
     size_t sector_sz_sec = 0;
     size_t i;
 
+    /*  获取对应 slot 占据的 sectors 的数量 */
     num_sectors_pri = boot_img_num_sectors(state, BOOT_PRIMARY_SLOT);
     num_sectors_sec = boot_img_num_sectors(state, BOOT_SECONDARY_SLOT);
     if ((num_sectors_pri != num_sectors_sec) &&
