@@ -25,7 +25,8 @@ int flash_area_to_sectors(struct flash_area *fa, int *num, boot_sector_t *sector
     /* 根据 flash area 信息,将包含的 sector 信息初始化到 sectors 指向的指针数组中,并且初始化 flash area 总的数量 */
 }
 
-/* 根据 flash id 以及 flash area 的指针,打开对应的 flash 设备 */
+/* 根据 flash id 信息
+ * 初始化 flash area 的指针,打开对应的 flash 设备 */
 int flash_area_open(int idx, const struct flash_area **fa)
 {
 }
@@ -48,6 +49,7 @@ int flash_area_id_from_image_slot(int slot)
 {
 }
 
+/* 返回擦除之后的数据, flash 一般擦除后都是 0xff */
 uint8_t flash_area_erased_val(const struct flash_area *fa)
 {
     return 0xff;

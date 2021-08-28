@@ -4,16 +4,21 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 #------------------------------------------------------------------------------
-
+# 创建 bootutil 的静态库文件
+set(CMAKE_C_COMPILER /opt/arm_tools/gcc-arm-none-eabi-6_2-2016q4/bin/arm-none-eabi-gcc)
 add_library(bootutil STATIC)
 
+message("hello china")
 target_include_directories(bootutil
     PUBLIC
         include
+        /home/yangyongsheng/redwindow/red_20210629/tinycrypt/lib/include
     PRIVATE
         src
+        rtthread/
 )
 
+# 添加源文件到 target
 target_sources(bootutil
     PRIVATE
         src/boot_record.c
@@ -33,4 +38,5 @@ target_sources(bootutil
         src/swap_move.c
         src/swap_scratch.c
         src/tlv.c
+        rtthread/bootutil_flash.c
 )

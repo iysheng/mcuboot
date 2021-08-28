@@ -119,10 +119,15 @@ extern "C" {
 #endif
 
 struct boot_swap_state {
+    /* 如果 image trailer 的 16 字节的 MAGIC 都匹配
+     * 那么这个 magic 就会标记为 BOOT_MAGIC_GOOD
+     * */
     uint8_t magic;      /* One of the BOOT_MAGIC_[...] values. */
+    /* image trailer 的 swap_info 的 BIT[3:0] */
     uint8_t swap_type;  /* One of the BOOT_SWAP_TYPE_[...] values. */
     uint8_t copy_done;  /* One of the BOOT_FLAG_[...] values. */
     uint8_t image_ok;   /* One of the BOOT_FLAG_[...] values. */
+    /* image trailer 的 swap_info 的 BIT[7:4] */
     uint8_t image_num;  /* Boot status belongs to this image */
 };
 

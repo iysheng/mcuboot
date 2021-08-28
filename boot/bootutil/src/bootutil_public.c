@@ -89,6 +89,7 @@ struct boot_swap_table {
  */
 static const struct boot_swap_table boot_swap_tables[] = {
     {
+        /* 这种 swap_type 是最一般的情景,不需要交换 */
         .magic_primary_slot =       BOOT_MAGIC_ANY,
         .magic_secondary_slot =     BOOT_MAGIC_GOOD,
         .image_ok_primary_slot =    BOOT_FLAG_ANY,
@@ -159,6 +160,7 @@ boot_swap_size_off(const struct flash_area *fap)
     return boot_swap_info_off(fap) - BOOT_MAX_ALIGN;
 }
 
+/* 获取 image trailer swap info 的偏移 */
 uint32_t
 boot_swap_info_off(const struct flash_area *fap)
 {
@@ -259,41 +261,57 @@ boot_read_swap_state(const struct flash_area *fap,
     uint8_t swap_info;
     int rc;
 
+    /* 先查找 image trailer 中 MAGIC 的偏移量 */
     off = boot_magic_off(fap);
+    /* 从 flash 指定偏移地址读取数据 */
     rc = flash_area_read(fap, off, magic, BOOT_MAGIC_SZ);
     if (rc < 0) {
         return BOOT_EFLASH;
     }
+    /*
+     * 如果是擦除状态
+     * */
     if (bootutil_buffer_is_erased(fap, magic, BOOT_MAGIC_SZ)) {
         state->magic = BOOT_MAGIC_UNSET;
     } else {
+        /* 解析对应的 magic 信息
+         * 如果 magic 正常情况是 BOOT_MAGIC_GOOD     
+         * */
         state->magic = boot_magic_decode(magic);
     }
 
     off = boot_swap_info_off(fap);
+    /* 读取 image trailer 存储的 swap info 信息 */
     rc = flash_area_read(fap, off, &swap_info, sizeof swap_info);
     if (rc < 0) {
         return BOOT_EFLASH;
     }
 
     /* Extract the swap type and image number */
+    /* swap 的类型和 image_num 都是在这个 8bit 的 swap_info 信息中
+     * 初始化到 boot_swap_state 结构体
+     * */
     state->swap_type = BOOT_GET_SWAP_TYPE(swap_info);
     state->image_num = BOOT_GET_IMAGE_NUM(swap_info);
 
+    /* 如果 swap_type 状态异常 */
     if (bootutil_buffer_is_erased(fap, &swap_info, sizeof swap_info) ||
             state->swap_type > BOOT_SWAP_TYPE_REVERT) {
         state->swap_type = BOOT_SWAP_TYPE_NONE;
         state->image_num = 0;
     }
 
+    /* 检查 image trailer 中 copy done 的状态 */
     rc = boot_read_copy_done(fap, &state->copy_done);
     if (rc) {
         return BOOT_EFLASH;
     }
 
+    /* 获取 image trailer 的 image_ok 信息 */
     return boot_read_image_ok(fap, &state->image_ok);
 }
 
+/* 获取指定 flash area 的 image trailer 信息 */
 int
 boot_read_swap_state_by_id(int flash_area_id, struct boot_swap_state *state)
 {
@@ -305,6 +323,9 @@ boot_read_swap_state_by_id(int flash_area_id, struct boot_swap_state *state)
         return BOOT_EFLASH;
     }
 
+    /* 从 flash area 的尾部获取 image trailer 信息
+     * 将相关数据初始化到 boot_swap_state 结构体
+     * */
     rc = boot_read_swap_state(fap, state);
     flash_area_close(fap);
     return rc;
@@ -408,6 +429,7 @@ boot_write_swap_info(const struct flash_area *fap, uint8_t swap_type,
     return boot_write_trailer(fap, off, (const uint8_t *) &swap_info, 1);
 }
 
+/* 根据当前 image 的 index 获取 swap 的 type */
 int
 boot_swap_type_multi(int image_index)
 {
@@ -417,12 +439,14 @@ boot_swap_type_multi(int image_index)
     int rc;
     size_t i;
 
+    /* 获取当前 image 的 primary slot 的 swap 信息 */
     rc = boot_read_swap_state_by_id(FLASH_AREA_IMAGE_PRIMARY(image_index),
                                     &primary_slot);
     if (rc) {
         return BOOT_SWAP_TYPE_PANIC;
     }
 
+    /* 获取当前 image 的 secondary slot 的 swap 信息 */
     rc = boot_read_swap_state_by_id(FLASH_AREA_IMAGE_SECONDARY(image_index),
                                     &secondary_slot);
     if (rc) {
@@ -442,11 +466,13 @@ boot_swap_type_multi(int image_index)
                 table->image_ok_secondary_slot == secondary_slot.image_ok) &&
             (table->copy_done_primary_slot == BOOT_FLAG_ANY  ||
                 table->copy_done_primary_slot == primary_slot.copy_done)) {
+            /* 打印提示信息 */
             BOOT_LOG_INF("Swap type: %s",
                          table->swap_type == BOOT_SWAP_TYPE_TEST   ? "test"   :
                          table->swap_type == BOOT_SWAP_TYPE_PERM   ? "perm"   :
                          table->swap_type == BOOT_SWAP_TYPE_REVERT ? "revert" :
                          "BUG; can't happen");
+            /* 如果 swap_type 类型异常,那么返回错误 */
             if (table->swap_type != BOOT_SWAP_TYPE_TEST &&
                     table->swap_type != BOOT_SWAP_TYPE_PERM &&
                     table->swap_type != BOOT_SWAP_TYPE_REVERT) {
@@ -457,6 +483,7 @@ boot_swap_type_multi(int image_index)
     }
 
     BOOT_LOG_INF("Swap type: none");
+    /* 估计一般情况会返回这个 */
     return BOOT_SWAP_TYPE_NONE;
 }
 

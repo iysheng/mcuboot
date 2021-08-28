@@ -64,6 +64,7 @@ boot_read_image_header(struct boot_loader_state *state, int slot,
 #endif
 
     off = 0;
+    /*  */
     if (bs) {
         sz = boot_img_sector_size(state, BOOT_PRIMARY_SLOT, 0);
         if (bs->op == BOOT_STATUS_OP_MOVE) {
@@ -211,6 +212,10 @@ boot_status_internal_off(const struct boot_status *bs, int elem_sz)
     return off;
 }
 
+/* 对 flash 当前 image 的 slot 属性进行检查
+ * 比如 slot 的擦除块大小是否一致,容量是否超出限制等等
+ * 正常返回 1
+ * */
 int
 boot_slots_compatible(struct boot_loader_state *state)
 {
@@ -253,6 +258,7 @@ boot_slots_compatible(struct boot_loader_state *state)
     return 1;
 }
 
+/* 打印 image header 的信息 */
 #define BOOT_LOG_SWAP_STATE(area, state)                            \
     BOOT_LOG_INF("%s: magic=%s, swap_type=0x%x, copy_done=0x%x, "   \
                  "image_ok=0x%x",                                   \
@@ -277,8 +283,12 @@ swap_status_source(struct boot_loader_state *state)
     (void)state;
 #endif
 
+    /* 获取当前 image 的编号 */
     image_index = BOOT_CURR_IMG(state);
 
+    /* 根据 image 的 id 的出来 primary slot 的 falsgh area id
+     * 进一步根据 id 查找对应的 flash 信息
+     * */
     rc = boot_read_swap_state_by_id(FLASH_AREA_IMAGE_PRIMARY(image_index),
             &state_primary_slot);
     assert(rc == 0);

@@ -136,6 +136,7 @@ swap_read_status(struct boot_loader_state *state, struct boot_status *bs)
     int area_id;
     int rc;
 
+    /* 获取 swap status 的状态 */
     bs->source = swap_status_source(state);
     switch (bs->source) {
     case BOOT_STATUS_SOURCE_NONE:

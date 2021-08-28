@@ -129,7 +129,7 @@ struct image_dependency {
 /** Image header.  All fields are in little endian byte order. */
 /* 镜像的头部信息 */
 struct image_header {
-    /* image_header 头部的魔数 */
+    /* image_header 头部的魔数 #define IMAGE_MAGIC                 0x96f3b83d */
     uint32_t ih_magic; 
     uint32_t ih_load_addr;
     /* image header 的大小,也指示了镜像的偏移长度,并且提供了向后兼容的支持 */

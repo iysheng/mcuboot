@@ -91,6 +91,7 @@ struct slot_usage_t {
 #define TARGET_STATIC
 #endif
 
+/* 将 image_header 头部信息初始化到 boot_loader_state 结构体 */
 static int
 boot_read_image_headers(struct boot_loader_state *state, bool require_all,
         struct boot_status *bs)
@@ -98,8 +99,9 @@ boot_read_image_headers(struct boot_loader_state *state, bool require_all,
     int rc;
     int i;
 
+    /* 目前每一个 image 暂定两个 slot 一个为 primary 另一个为 secondary */
     for (i = 0; i < BOOT_NUM_SLOTS; i++) {
-        /* 尝试读取 image 的 header 保存到 state 对应的成员变量 */
+        /* 从 flash 对应的 flash_area 区域读取 image 的 header 信息保存到 state 对应的结构体成员变量 */
         rc = boot_read_image_header(state, i, boot_img_hdr(state, i), bs);
         if (rc != 0) {
             /* If `require_all` is set, fail on any single fail, otherwise
@@ -302,7 +304,10 @@ boot_write_sz(struct boot_loader_state *state)
     return elem_sz;
 }
 
-/* 初始化对应的 flash area */
+/* 初始化对应的 flash area, 根据 flash_area 的信息
+ * 将对应包含的 sectors 信息初始化到 state 指向的结构体,具体的 sectors 的详细
+ * 信息保存在 sectors 头指针, 数组的长度是 num_sectors
+ * */
 static int
 boot_initialize_area(struct boot_loader_state *state, int flash_area)
 {
@@ -334,10 +339,12 @@ boot_initialize_area(struct boot_loader_state *state, int flash_area)
         return BOOT_EFLASH;
     }
 
+    /* 一般都不会定义 FLASH_AREA_GET_SECTORS */
 #ifdef MCUBOOT_USE_FLASH_AREA_GET_SECTORS
     rc = flash_area_get_sectors(flash_area, &num_sectors, out_sectors);
 #else
     _Static_assert(sizeof(int) <= sizeof(uint32_t), "Fix needed");
+    /* 直接根据 flash_area 转换为 sectors 的信息 */
     rc = flash_area_to_sectors(flash_area, (int *)&num_sectors, out_sectors);
 #endif /* defined(MCUBOOT_USE_FLASH_AREA_GET_SECTORS) */
     if (rc != 0) {
@@ -380,7 +387,9 @@ boot_read_sectors(struct boot_loader_state *state)
     }
 #endif
 
-    /* 获取写颗粒的大小 */
+    /* 获取写颗粒的大小,想具体信息初始化到 state 指向的
+     * struct boot_loader_state 结构体
+     * 指针 */
     BOOT_WRITE_SZ(state) = boot_write_sz(state);
 
     return 0;
@@ -400,6 +409,7 @@ boot_status_reset(struct boot_status *bs)
     bs->swap_size = 0;
     bs->source = 0;
 
+    /* 初始化 boot_status 结构体的参数 */
     bs->op = BOOT_STATUS_OP_MOVE;
     bs->idx = BOOT_STATUS_IDX_0;
     bs->state = BOOT_STATUS_STATE_0;
@@ -834,7 +844,7 @@ done:
 }
 #endif /* MCUBOOT_HW_ROLLBACK_PROT */
 
-/* 应该是没有定义这两个 */
+/* ~~应该是没有定义这两个~~ */
 #if !defined(MCUBOOT_DIRECT_XIP) && !defined(MCUBOOT_RAM_LOAD)
 /**
  * Determines which swap operation to perform, if any.  If it is determined
@@ -866,6 +876,7 @@ boot_validated_swap_type(struct boot_loader_state *state,
         }
     }
 
+    /* 返回 swap 的 type */
     return swap_type;
 }
 
@@ -1671,7 +1682,9 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
     }
 
     /* Attempt to read an image header from each slot. */
-    /* 获取所有的 strcu image_header 信息 */
+    /* 获取当前 image 对应所有 slot 的 struct image_header 信息
+     * 这里传递的 boot_status 指针为 NULL
+     * */
     rc = boot_read_image_headers(state, false, NULL);
     if (rc != 0) {
         /* Continue with next image if there is one. */
@@ -1724,6 +1737,9 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
         /* Determine if we rebooted in the middle of an image swap
          * operation. If a partial swap was detected, complete it.
          */
+        /* 判断是否是 image swap 的中间状态
+         * 如果是中间 image swap 的状态,那么继续完成 swap
+         * */
         if (!boot_status_is_reset(bs)) {
 
 #if (BOOT_IMAGE_NUMBER > 1)
@@ -1752,6 +1768,7 @@ boot_prepare_image_for_update(struct boot_loader_state *state,
             BOOT_SWAP_TYPE(state) = BOOT_SWAP_TYPE_NONE;
         } else {
             /* There was no partial swap, determine swap type. */
+            /* 如果是正常启动状态 */
             if (bs->swap_type == BOOT_SWAP_TYPE_NONE) {
                 BOOT_SWAP_TYPE(state) = boot_validated_swap_type(state, bs);
             } else {
