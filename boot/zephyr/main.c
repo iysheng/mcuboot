@@ -180,7 +180,9 @@ static void do_boot(struct boot_rsp *rsp)
     rc = flash_device_base(rsp->br_flash_dev_id, &flash_base);
     assert(rc == 0);
 
-    /* 获取向量表首地址 */
+    /* 获取向量表首地址
+     * 有效的 image 的首地址
+     * */
     vt = (struct arm_vector_table *)(flash_base +
                                      rsp->br_image_off +
                                      rsp->br_hdr->ih_hdr_size);

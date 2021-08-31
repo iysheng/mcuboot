@@ -100,8 +100,9 @@ struct boot_rsp {
     * struct image_tlv_info 根据魔数还支持一种收保护的 tlv 对应的魔数是 `IMAGE_TLV_PROT_INFO_MAGIC` 而常规的 tlv 对应的魔数是 `IMAGE_TLV_INFO_MAGIC`
     * struct image_tlv
 2. Flash Map: 一个 flash 设备根据他的 flash map 可以被划分为多个 flash area.
-    * Flash Area : 一个 flash area 对应会有一个数字化的 ID
-
+   
+* Flash Area : 一个 flash area 对应会有一个数字化的 ID
+  
 3. mcuboot 尝试标准化两件事情:
     1. 安全启动功能: bootloader 只会启动经过加密认证的 image
     2. 标准化 flash 布局: 定义嵌入式系统中 flash map 的通用方法,也就是定义 flash 数据保存布局的方法
@@ -124,6 +125,7 @@ struct boot_rsp {
         * `struct image_tlv_info`  tlv 的头部
         * `struct image_tlv` tlv 实体的抽象,特别地 tlv 的类型是以`IMAGE_TLV_(...)` 格式定义的
 7. Image Trailers
+   
     * `Image Trailers` 信息保存在 slot 的尾部,这里包含了存储的 image 的元数据,以及是否需要更新操作.简单来说,上电的时候, 会检查 `swap status` 来确认是否正在更新以及恢复更新.`swap info` `copy done` 以及 `image ok`用来检查是否需要更新的.
 ```
      0                   1                   2                   3
@@ -197,5 +199,37 @@ fih_int boot_go(struct boot_rsp *rsp)
 ```
 
 
-/*  进行跳转 */
+``` C
+/*  进行跳转,典型的跳转函数示例 */
 static void do_boot(struct boot_rsp \*rsp)
+/* 获取 flash 的基地址 */
+    rc = flash_device_base(rsp->br_flash_dev_id, &flash_base);
+    /* 获取向量表首地址
+     * 有效的 image 的首地址
+     * */
+    vt = (struct arm_vector_table *)(flash_base +
+                                     rsp->br_image_off +
+                                     rsp->br_hdr->ih_hdr_size);
+    /* 设置 SCB 控制器 */
+    SCB->VTOR = (uint32_t)__vector_relay_table;
+    /* 设置栈指针 */
+    __set_MSP(vt->msp);
+    /* 执行 img 的 reset 函数 */
+    ((void (*)(void))vt->reset)();
+```
+#### 移植笔记
+* stm32h750x flash 是 128KB , SRAM 512KB
+其中, sram 布局为:
+![](figures/sram.png)
+其中 DTCM RAM 是 cortex-M7 专有的,映射在 0x20000000- 起始的这段内存区
+flash 布局为: 
+![](figures/flash.png)
+在 flash 的 memory mapped 模式,最大映射的空间大小不超过 256MB
+---
+w25q64jv 容量为 8MB,page 大小为 256 B, sector 大小为 4KB,block 大小为 128KB,其中不同的擦除指令擦除去 sector 大小不一样.
+|擦除指令|擦除空间大小|
+|---|---|
+|0x20|4KB|
+|0x52|32KB|
+|0xD8|64KB|
+一共有 16 个 blcok

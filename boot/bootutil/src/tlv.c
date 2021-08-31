@@ -35,6 +35,7 @@
  * @returns 0 if the TLV iterator was successfully started
  *          -1 on errors
  */
+/* 初始化一个 tlv itervator 迭代器 */
 int
 bootutil_tlv_iter_begin(struct image_tlv_iter *it, const struct image_header *hdr,
                         const struct flash_area *fap, uint16_t type, bool prot)
@@ -46,6 +47,7 @@ bootutil_tlv_iter_begin(struct image_tlv_iter *it, const struct image_header *hd
         return -1;
     }
 
+    /* 获取 tlv 的偏移量 */
     off_ = BOOT_TLV_OFF(hdr);
     if (LOAD_IMAGE_DATA(hdr, fap, off_, &info, sizeof(info))) {
         return -1;
@@ -68,6 +70,7 @@ bootutil_tlv_iter_begin(struct image_tlv_iter *it, const struct image_header *hd
         return -1;
     }
 
+    /* 根据 flash 保存 tlv 的信息初始化对应的这个迭代器 */
     it->hdr = hdr;
     it->fap = fap;
     it->type = type;

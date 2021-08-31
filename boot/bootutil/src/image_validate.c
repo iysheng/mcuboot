@@ -329,6 +329,9 @@ bootutil_get_img_security_cnt(struct image_header *hdr,
  * Verify the integrity of the image.
  * Return non-zero if image could not be validated/does not validate.
  */
+/* 如果 image 可以被正常识别返回 0
+ * 否则返回非 0
+ * */
 fih_int
 bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
                       struct image_header *hdr, const struct flash_area *fap,
@@ -368,6 +371,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
         memcpy(out_hash, hash, 32);
     }
 
+    /* 初始化 tlv 的迭代器 */
     rc = bootutil_tlv_iter_begin(&it, hdr, fap, IMAGE_TLV_ANY, false);
     if (rc) {
         goto out;
@@ -378,6 +382,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
      * and are able to do.
      */
     while (true) {
+        /* 根据这个迭代器遍历所有的 tlv */
         rc = bootutil_tlv_iter_next(&it, &off, &len, &type);
         if (rc < 0) {
             goto out;
