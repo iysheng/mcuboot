@@ -12,7 +12,9 @@ Python libraries.  These can be installed using 'pip3':
 
 ## [Managing keys](#managing-keys)
 
+目前支持 4 中类型的 key
 This tool currently supports rsa-2048, rsa-3072, ecdsa-p256 and ed25519 keys.
+创建 keypair
 You can generate a keypair for one of these types using the 'keygen' command:
 
     ./scripts/imgtool.py keygen -k filename.pem -t rsa-2048
@@ -20,6 +22,7 @@ You can generate a keypair for one of these types using the 'keygen' command:
 or use rsa-3072, ecdsa-p256, or ed25519 for the type.  The key type used
 should match what MCUboot is configured to verify.
 
+这个产生的文件在打签的时候需要，所以不要散播这个文件
 This key file is what is used to sign images, this file should be
 protected, and not widely distributed.
 
